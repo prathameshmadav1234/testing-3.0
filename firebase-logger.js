@@ -20,18 +20,25 @@ const auth = getAuth(app);
 const firebaseUrl = "https://esp32ledcontrol-c0d28-default-rtdb.firebaseio.com/led.json";
 
 let currentUser = null;
+let previousUser = null;
 let updateTimer = null;
 let lastEntry = null;
 
 onAuthStateChanged(auth, (user) => {
-  currentUser = user;
   if (user) {
+    currentUser = user;
+    previousUser = user;
     startUpdater();
   } else {
+    // On logout, perform one final update with the previous user
+    if (previousUser) {
+      currentUser = previousUser; // Temporarily set for fetchData
+      fetchData();
+      currentUser = null;
+    }
     stopUpdater();
-    lastEntry = null; // Reset on logout
-    // On logout, perform one final update to log the latest data
-    fetchData();
+    lastEntry = null;
+    previousUser = null;
   }
 });
 

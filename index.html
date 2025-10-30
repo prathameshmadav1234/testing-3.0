@@ -331,6 +331,7 @@
           console.error("Error logging on logout:", e);
         }
       }
+      // Sign out after logging
       signOut(auth).then(() => {
         localStorage.removeItem("userEmail");
         window.location.href = "login.html";
