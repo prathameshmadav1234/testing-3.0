@@ -56,11 +56,10 @@
     <p id="status"></p>
   </div>
 
-
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCLAKW51iGzR68EL-ZPWxraFz-NTdNJPqM",
@@ -74,6 +73,7 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const database = getDatabase(app);
 
     window.login = async function () {
       const email = document.getElementById("email").value;
@@ -85,12 +85,30 @@
         status.textContent = "✅ Login successful!";
         status.style.color = "#00ff99";
         localStorage.setItem("userEmail", email);
+
+        // ✅ Log "LOGIN" entry to Firebase
+        const user = auth.currentUser;
+        if (user) {
+          const today = new Date().toISOString().split("T")[0];
+          const now = new Date();
+          const time = now.toLocaleTimeString();
+          const entry = {
+            time,
+            ledState: "LOGIN",
+            brightness: "-",
+            potValue: "-",
+            timestamp: now.getTime()
+          };
+          const logsRef = ref(database, `logs/${user.uid}/${today}`);
+          await push(logsRef, entry);
+        }
+
         window.location.href = "index.html"; // Go to control page
       } catch (error) {
         status.textContent = "❌ Login failed: " + error.message;
         status.style.color = "#ff5555";
       }
-    }
+    };
   </script>
 </body>
 </html>

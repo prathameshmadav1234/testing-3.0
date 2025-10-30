@@ -22,21 +22,21 @@ const firebaseUrl = "https://esp32ledcontrol-c0d28-default-rtdb.firebaseio.com/l
 let currentUser = null;
 let updateTimer = null;
 let lastEntry = null;
-const storedLogsKey = 'pendingLogs';
 
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
   currentUser = user;
   if (user) {
-    // Upload any stored logs on login
-    await uploadStoredLogs();
     startUpdater();
   } else {
-    // Continue updater even when logged out
-    startUpdater();
+    stopUpdater();
+    lastEntry = null; // Reset on logout
+    // On logout, perform one final update to log the latest data
+    fetchData();
   }
 });
 
 async function fetchData() {
+  if (!currentUser) return;
   const today = new Date().toISOString().split("T")[0];
   try {
     const res = await fetch(firebaseUrl + "?t=" + Date.now());
@@ -50,16 +50,10 @@ async function fetchData() {
 
     // Check for duplicates to avoid multiple pushes from different devices
     if (!lastEntry || JSON.stringify(lastEntry) !== JSON.stringify(entry)) {
-      if (getAuth().currentUser) {
-        // Push to Firebase under /logs/{userUID}/{date}
-        const logsRef = ref(database, `logs/${getAuth().currentUser.uid}/${today}`);
-        await push(logsRef, entry);
-        console.log("Logged data to Firebase:", entry);
-      } else {
-        // Store in localStorage
-        storeLogLocally(entry, today);
-        console.log("Stored log locally:", entry);
-      }
+      // Push to Firebase under /logs/{userUID}/{date}
+      const logsRef = ref(database, `logs/${currentUser.uid}/${today}`);
+      await push(logsRef, entry);
+      console.log("Logged data to Firebase:", entry);
       lastEntry = entry;
     }
   } catch (e) {
@@ -75,31 +69,6 @@ function startUpdater() {
 function stopUpdater() {
   if (updateTimer) clearInterval(updateTimer);
 }
-
-function storeLogLocally(entry, date) {
-  const stored = JSON.parse(localStorage.getItem(storedLogsKey) || '{}');
-  if (!stored[date]) stored[date] = [];
-  stored[date].push(entry);
-  localStorage.setItem(storedLogsKey, JSON.stringify(stored));
-}
-
-async function uploadStoredLogs() {
-  const stored = JSON.parse(localStorage.getItem(storedLogsKey) || '{}');
-  const user = getAuth().currentUser;
-  if (!user || Object.keys(stored).length === 0) return;
-
-  for (const date in stored) {
-    const logsRef = ref(database, `logs/${user.uid}/${date}`);
-    for (const entry of stored[date]) {
-      await push(logsRef, entry);
-    }
-  }
-  localStorage.removeItem(storedLogsKey);
-  console.log("Uploaded stored logs to Firebase");
-}
-
-// Export stopUpdater for external use
-export { stopUpdater };
 
 // Initial fetch on load if authenticated
 if (currentUser) {
