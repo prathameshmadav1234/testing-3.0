@@ -301,10 +301,9 @@
 
     // ✅ Logout Function
     window.logout = () => {
-      signOut(auth).then(() => {
-        localStorage.removeItem("userEmail");
-        window.location.href = "login.html";
-      });
+      // Do not sign out to keep logging running
+      localStorage.removeItem("userEmail");
+      window.location.href = "login.html";
     };
 
 

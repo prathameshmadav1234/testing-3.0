@@ -1,6 +1,3 @@
-- [x] Modify firebase-logger.js to always run the updater (startUpdater on load, regardless of auth)
-- [x] Update fetchData to store data in localStorage when logged out, push to Firebase when logged in
-- [x] Add function to upload localStorage data to Firebase on login
-- [x] Call upload function in onAuthStateChanged when user logs in
-- [x] Ensure no duplicates by checking lastEntry for both localStorage and Firebase
-- [ ] Test the flow: logout, wait for data, login, check if logs appear
+- [x] Modified logout to not sign out from Firebase, keeping logging active even when "logged out"
+- [x] Added check in login.html to redirect if already "logged in" (userEmail in localStorage)
+- [x] Simplified firebase-logger.js to only log when authenticated, no localStorage needed since logging never stops

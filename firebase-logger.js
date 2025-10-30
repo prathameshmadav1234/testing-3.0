@@ -25,13 +25,11 @@ let lastEntry = null;
 
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
-  if (user) {
-    uploadStoredLogs(); // Upload any stored logs on login
-  }
-  // Always keep updater running
+  // Updater always runs
 });
 
 async function fetchData() {
+  if (!currentUser) return; // Only log if user is authenticated
   const today = new Date().toISOString().split("T")[0];
   try {
     const res = await fetch(firebaseUrl + "?t=" + Date.now());
@@ -45,18 +43,10 @@ async function fetchData() {
 
     // Check for duplicates to avoid multiple pushes from different devices
     if (!lastEntry || JSON.stringify(lastEntry) !== JSON.stringify(entry)) {
-      if (currentUser) {
-        // Push to Firebase under /logs/{userUID}/{date}
-        const logsRef = ref(database, `logs/${currentUser.uid}/${today}`);
-        await push(logsRef, entry);
-        console.log("Logged data to Firebase:", entry);
-      } else {
-        // Store in localStorage
-        const storedLogs = JSON.parse(localStorage.getItem('esp32Logs') || '[]');
-        storedLogs.push(entry);
-        localStorage.setItem('esp32Logs', JSON.stringify(storedLogs));
-        console.log("Stored data in localStorage:", entry);
-      }
+      // Push to Firebase under /logs/{userUID}/{date}
+      const logsRef = ref(database, `logs/${currentUser.uid}/${today}`);
+      await push(logsRef, entry);
+      console.log("Logged data to Firebase:", entry);
       lastEntry = entry;
     }
   } catch (e) {
@@ -73,21 +63,7 @@ function stopUpdater() {
   if (updateTimer) clearInterval(updateTimer);
 }
 
-async function uploadStoredLogs() {
-  const storedLogs = JSON.parse(localStorage.getItem('esp32Logs') || '[]');
-  if (storedLogs.length === 0 || !currentUser) return;
 
-  const today = new Date().toISOString().split("T")[0];
-  const logsRef = ref(database, `logs/${currentUser.uid}/${today}`);
-
-  for (const entry of storedLogs) {
-    await push(logsRef, entry);
-    console.log("Uploaded stored log to Firebase:", entry);
-  }
-
-  localStorage.removeItem('esp32Logs');
-  console.log("Uploaded and cleared stored logs");
-}
 
 // Always start updater on load
 startUpdater();
