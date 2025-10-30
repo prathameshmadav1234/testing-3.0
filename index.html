@@ -305,7 +305,6 @@
 
     // ✅ Logout Function
     window.logout = () => {
-      stopUpdater(); // Stop the background updater immediately
       signOut(auth).then(() => {
         localStorage.removeItem("userEmail");
         window.location.href = "login.html";
