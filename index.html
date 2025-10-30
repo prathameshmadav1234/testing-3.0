@@ -232,10 +232,6 @@
 
   <!-- ✅ Background Logger Script -->
   <script type="module" src="firebase-logger.js"></script>
-  <script type="module">
-    import { fetchData } from "./firebase-logger.js";
-    window.fetchData = fetchData; // Make it global for logout
-  </script>
 
   <!-- ✅ Firebase LED + Logout -->
   <script type="module">
@@ -304,19 +300,11 @@
     window.turnOff = () => set(ref(database, "/led/state"), 0);
 
     // ✅ Logout Function
-    window.logout = async () => {
-      try {
-        // Perform a final data fetch and log before signing out
-        await window.fetchData();
-        await signOut(auth);
+    window.logout = () => {
+      signOut(auth).then(() => {
         localStorage.removeItem("userEmail");
         window.location.href = "login.html";
-      } catch (error) {
-        console.error("Error during logout:", error);
-        // Proceed with logout even if fetch fails
-        localStorage.removeItem("userEmail");
-        window.location.href = "login.html";
-      }
+      });
     };
 
 
