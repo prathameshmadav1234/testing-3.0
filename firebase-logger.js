@@ -68,6 +68,9 @@ function stopUpdater() {
   if (updateTimer) clearInterval(updateTimer);
 }
 
+// Export stopUpdater for external use
+export { stopUpdater };
+
 // Initial fetch on load if authenticated
 if (currentUser) {
   fetchData();
