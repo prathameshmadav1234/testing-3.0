@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ESP32 Data Logs - Date Wise</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      background: radial-gradient(circle at top, #0b1e30, #000);
+      color: white;
+      font-family: "Poppins", sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #00ffff;
+      text-shadow: 0 0 10px rgba(0,255,255,0.6);
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      width: 90%;
+      background-color: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(0,255,255,0.1);
+    }
+    th, td {
+      border: 1px solid rgba(0,255,255,0.3);
+      padding: 10px;
+      font-size: 15px;
+    }
+    th {
+      background-color: rgba(0,255,255,0.15);
+      color: #00ffff;
+      text-shadow: 0 0 6px rgba(0,255,255,0.4);
+    }
+    tr:nth-child(even) {
+      background-color: rgba(255,255,255,0.05);
+    }
+    button {
+      background-color: #00bfa5;
+      color: white;
+      border: none;
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px;
+      transition: 0.3s;
+      box-shadow: 0 0 10px rgba(0,255,153,0.4);
+    }
+    button:hover {
+      background-color: #1de9b6;
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(0,255,153,0.6);
+    }
+    input[type="date"] {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    footer {
+      margin-top: 20px;
+      font-size: 14px;
+      opacity: 0.8;
+      color: #aaa;
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📅 ESP32 Date-wise Data Logs</h1>
+
+  <div>
+    <label for="datePicker">Select Date:</label><br>
+    <input type="date" id="datePicker" onchange="loadLogsByDate()" />
+  </div>
+
+  <table id="dataTable">
+    <tr>
+      <th>Time</th>
+      <th>LED State</th>
+      <th>Brightness (%)</th>
+      <th>Pot Value</th>
+    </tr>
+  </table>
+
+  <div class="button-container">
+    <button onclick="downloadCSV()">⬇️ Download Excel (.csv)</button>
+    <button onclick="goBack()">⬅ Back to Main Page</button>
+    <button onclick="clearLogs()">🗑 Clear Selected Date Logs</button>
+  </div>
+
+  <footer id="footerText">
+    Auto-updating every 10 seconds • Date-wise Log Storage • Firebase ⚡
+  </footer>
+
+  <!-- Include background logger -->
+  <script type="module" src="firebase-logger.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLAKW51iGzR68EL-ZPWxraFz-NTdNJPqM",
+      authDomain: "esp32ledcontrol-c0d28.firebaseapp.com",
+      databaseURL: "https://esp32ledcontrol-c0d28-default-rtdb.firebaseio.com",
+      projectId: "esp32ledcontrol-c0d28",
+      storageBucket: "esp32ledcontrol-c0d28.appspot.com",
+      messagingSenderId: "616534198261",
+      appId: "1:616534198261:web:5c6848fdec9d01c9c6c2bc"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const auth = getAuth();
+
+    const table = document.getElementById("dataTable");
+    const datePicker = document.getElementById("datePicker");
+    const footerText = document.getElementById("footerText");
+
+    const today = new Date().toISOString().split("T")[0];
+    datePicker.value = today;
+
+    let currentUser = null;
+    let currentListener = null;
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      if (user) {
+        loadLogsByDate();
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+
+    function renderTable(logs) {
+      table.innerHTML = `
+        <tr>
+          <th>Time</th>
+          <th>LED State</th>
+          <th>Brightness (%)</th>
+          <th>Pot Value</th>
+        </tr>`;
+      logs.forEach(log => {
+        const row = table.insertRow(-1);
+        row.insertCell(0).textContent = log.time;
+        row.insertCell(1).textContent = log.ledState;
+        row.insertCell(2).textContent = log.brightness;
+        row.insertCell(3).textContent = log.potValue;
+      });
+    }
+
+    function loadLogsByDate() {
+      if (!currentUser) return;
+      const selectedDate = datePicker.value;
+      const logsRef = ref(database, `logs/${currentUser.uid}/${selectedDate}`);
+
+      if (currentListener) currentListener();
+
+      currentListener = onValue(logsRef, (snapshot) => {
+        const data = snapshot.val();
+        let logs = [];
+        if (data) {
+          logs = Object.values(data).sort((a, b) => a.timestamp - b.timestamp);
+        }
+        renderTable(logs);
+        if (selectedDate === today) {
+          footerText.textContent = "Real-time updates • Live Data • Firebase ⚡";
+        } else {
+          footerText.textContent = "Viewing past logs • Real-time updates";
+        }
+      }, (error) => {
+        console.error("Error loading logs:", error);
+      });
+    }
+
+    function downloadCSV() {
+      if (!currentUser) return;
+      const date = datePicker.value;
+      const logsRef = ref(database, `logs/${currentUser.uid}/${date}`);
+      onValue(logsRef, (snapshot) => {
+        const data = snapshot.val();
+        let logs = [];
+        if (data) {
+          logs = Object.values(data).sort((a, b) => a.timestamp - b.timestamp);
+        }
+        if (logs.length === 0) return alert("No logs for this date!");
+        const headers = ["Time", "LED State", "Brightness (%)", "Pot Value"];
+        const csv = [headers.join(","), ...logs.map(l =>
+          `${l.time},${l.ledState},${l.brightness},${l.potValue}`)].join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `ESP32_Logs_${date}.csv`;
+        link.click();
+      }, { onlyOnce: true });
+    }
+
+    function clearLogs() {
+      if (!currentUser) return;
+      const date = datePicker.value;
+      if (confirm(`Clear logs for ${date}?`)) {
+        const logsRef = ref(database, `logs/${currentUser.uid}/${date}`);
+        remove(logsRef).then(() => {
+          renderTable([]);
+        }).catch((error) => {
+          console.error("Error clearing logs:", error);
+        });
+      }
+    }
+
+    function goBack() {
+      window.location.href = "index.html";
+    }
+
+    // Make functions global for onclick
+    window.loadLogsByDate = loadLogsByDate;
+    window.downloadCSV = downloadCSV;
+    window.clearLogs = clearLogs;
+    window.goBack = goBack;
+
+    window.addEventListener("load", () => {
+      // Listener will be set when auth state changes
+    });
+  </script>
+</body>
+</html>
