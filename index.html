@@ -232,11 +232,15 @@
 
   <!-- ✅ Background Logger Script -->
   <script type="module" src="firebase-logger.js"></script>
+  <script type="module">
+    import { fetchData } from "./firebase-logger.js";
+    window.fetchData = fetchData; // Make it global for logout
+  </script>
 
   <!-- ✅ Firebase LED + Logout -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
     import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -301,41 +305,18 @@
 
     // ✅ Logout Function
     window.logout = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        const today = new Date().toISOString().split("T")[0];
-        const now = new Date();
-        const time = now.toLocaleTimeString();
-
-        // Log the current state before logout
-        try {
-          const res = await fetch("https://esp32ledcontrol-c0d28-default-rtdb.firebaseio.com/led.json?t=" + Date.now());
-          const data = await res.json();
-          const ledState = data.real_state === 1 ? "ON" : "OFF";
-          const brightness = data.brightness_percent ?? "N/A";
-          const potValue = data.pot_value ?? "N/A";
-          const currentEntry = { time, ledState, brightness, potValue, timestamp: now.getTime() };
-          const logsRef = ref(database, `logs/${user.uid}/${today}`);
-          await push(logsRef, currentEntry);
-
-          // Then log LOGOUT
-          const logoutEntry = {
-            time,
-            ledState: "LOGOUT",
-            brightness: "-",
-            potValue: "-",
-            timestamp: now.getTime()
-          };
-          await push(logsRef, logoutEntry);
-        } catch (e) {
-          console.error("Error logging on logout:", e);
-        }
-      }
-      // Sign out after logging
-      signOut(auth).then(() => {
+      try {
+        // Perform a final data fetch and log before signing out
+        await window.fetchData();
+        await signOut(auth);
         localStorage.removeItem("userEmail");
         window.location.href = "login.html";
-      });
+      } catch (error) {
+        console.error("Error during logout:", error);
+        // Proceed with logout even if fetch fails
+        localStorage.removeItem("userEmail");
+        window.location.href = "login.html";
+      }
     };
 
 

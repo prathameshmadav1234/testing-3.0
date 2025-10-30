@@ -1,11 +1,10 @@
-# TODO: Centralize Logs in Firebase for Cross-Device Consistency
+# TODO: Ensure Excel Report Updates on Logout
 
-## Completed:
-- [x] Modify firebase-logger.js: Change storage to Firebase Realtime Database under /logs/{userUID}/{date}, using authenticated user's UID. Ensure logging only when authenticated. Add error handling.
-- [x] Update excel.html: Fetch logs from Firebase instead of localStorage, with real-time updates using onValue. Update renderTable, loadLogsByDate, downloadCSV, clearLogs functions.
-- [x] Remove localStorage logging code from index.html: Remove getLogs, saveLogs, fetchData logging logic from the script.
-- [x] Remove localStorage logging code from login.html: Remove background logging script or localStorage usage.
-- [x] Remove localStorage usage from firebase-logger.js: Ensure no localStorage calls remain.
-- [x] Fix button functions in excel.html: Make downloadCSV, clearLogs, goBack functions global for onclick events.
-- [x] Test logging and viewing on multiple devices after login.
-- [x] Verify real-time updates in excel.html.
+## Completed Tasks:
+- [x] Modify firebase-logger.js: Export the `fetchData` function to allow calling from other scripts.
+- [x] Modify index.html: Update the `logout` function to await a final `fetchData()` call before signing out, ensuring the latest data is logged to Firebase.
+
+## Followup Steps:
+- [ ] Test the logout process to verify the logs are updated with the latest data.
+- [ ] Check for any console errors during logout.
+- [ ] Ensure the app still functions correctly after changes.
