@@ -27,10 +27,8 @@ onAuthStateChanged(auth, (user) => {
   currentUser = user;
   if (user) {
     uploadStoredLogs(); // Upload any stored logs on login
-  } else {
-    stopUpdater();
-    lastEntry = null; // Reset on logout
   }
+  // Updater always runs
 });
 
 async function fetchData() {
