@@ -34,7 +34,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 async function fetchData() {
-  if (!currentUser) return;
+  if (!getAuth().currentUser) return;
   const today = new Date().toISOString().split("T")[0];
   try {
     const res = await fetch(firebaseUrl + "?t=" + Date.now());
@@ -49,7 +49,7 @@ async function fetchData() {
     // Check for duplicates to avoid multiple pushes from different devices
     if (!lastEntry || JSON.stringify(lastEntry) !== JSON.stringify(entry)) {
       // Push to Firebase under /logs/{userUID}/{date}
-      const logsRef = ref(database, `logs/${currentUser.uid}/${today}`);
+      const logsRef = ref(database, `logs/${getAuth().currentUser.uid}/${today}`);
       await push(logsRef, entry);
       console.log("Logged data to Firebase:", entry);
       lastEntry = entry;
